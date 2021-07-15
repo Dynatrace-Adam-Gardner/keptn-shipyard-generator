@@ -11,3 +11,7 @@ This is a single page, all-in-one HTML file to generate Keptn Shipyard YAML file
 Save the `index.html` and open in a modern browser.
 
 Content will update when you remove focus from the input box.
+
+
+## Credits
+Uses [Bulma](https://bulma.io) and [nodeca/js-yaml](https://github.com/nodeca/js-yaml)

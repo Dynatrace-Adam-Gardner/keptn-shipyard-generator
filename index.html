@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Visual Shipyard Generator</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+	<script src="js-yaml.js"></script>
+  </head>
+  <body onload="generate_shipyard()">
+  
+  <div>
+   <h1>Instructions: YAML will update when you tab out of each box</h1>
+  </div>
+  
+  <div class="columns">
+    <div class="column">
+      <section class="section">
+        <div class="container">
+          <h1 class="title">Step 1: Shipyard Name</h1>
+	    	<p>Give your shipyard a name...</p>
+	    	<input class="input" type="text" placeholder="shipyard-sockshop" id="shipyard-name" onfocusout="set_name()">
+        </div>
+      </section>
+	  
+	  <section class="section">
+        <div class="container">
+          <h1 class="title">Step 2: Stage Definition</h1>
+	    	<p>Define your stages. Seperated by commas...</p>
+	    	<input class="input" type="text" placeholder="dev,staging,production" id="stages-input" onfocusout="set_stages()">
+		</div>
+      </section>
+	  
+	  <section class="section">
+	    <div class="container">
+          <h1 class="title">Step 3: Define Sequences per Stage</h1>
+	    	<p>Define sequences per stage. Seperated by commas...<br /><br /></p>
+		
+		<!-- This nav list is dynamically built to show stages -->
+		<nav class="level" id="sequences_per_stage_container">
+        </nav>
+      </div>
+	  </section>
+	  
+    </div>
+    <div class="column">
+      <section class="section">
+        <div class="container">
+          <h1 class="title">Result</h1>
+	  	  <textarea class="textarea" rows="20" id="result" readonly></textarea>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <div>
+    <h2>TODO List</h2>
+	<ul>
+	  <li>Sequence metadata (eg. <code>triggeredOn</code>)</li>
+	  <li>Tasks</li>
+	</ul>
+  </div>
+  
+  
+<script>
+// Constants and globals
+const SHIPYARD_API_VERSION = "spec.keptn.sh/0.2.0";
+const SHIPYARD_KIND = "Shipyard";
+var shipyard_name = "";
+var stages = [];
+
+function set_name(){
+  shipyard_name = document.getElementById('shipyard-name').value;
+  console.log("setting name to: " + shipyard_name);
+  
+  // Regenerate shipyard
+  generate_shipyard()
+}
+
+function set_stages() {
+  temp_stages = document.getElementById('stages-input').value;
+  // Split items at comma and trim whitespaces (if any) from each items
+  // Model as an object
+  stages = temp_stages.split(",").map(function(item) {
+    stage = {
+	  'name': item.trim()
+	}
+    return stage;
+  });
+  
+  //console.log("processing stages: " + stages);
+  
+  // Build stages UI
+  build_stages_ui()
+  
+  // Regenerate shipyard
+  generate_shipyard()
+}
+
+function set_sequence_input(stage) {
+  console.log("adding sequences for stage: " + stage);
+  sequences_to_add = document.getElementById('sequences-input-'+stage).value;
+  console.log("sequences_to_add: " + sequences_to_add);
+  
+  // Loop through each stage and get the matching stage
+  for (let i = 0; i < stages.length; i++) {
+    // If stage name matches the current stage, add sequences!
+	if (stage == stages[i].name) {
+	  console.log("Matched stages for: " + stage + ". Adding sequences");
+	  sequences = sequences_to_add.split(",").map(function(item) {
+        sequence = {
+	      'name': item.trim()
+	    }
+        return sequence;
+      });
+	  stages[i]['sequences'] = sequences;
+	}
+  }
+  
+  // Regenerate shipyard
+  generate_shipyard()
+}
+
+function build_stages_ui() {
+
+  /* For each stage, add DOM elements like this:
+   * <div class="level-item has-text-centered">
+   *   <div>
+   *     <p class="heading">dev</p>
+   *     <input class="input" type="text" value="delivery" id="sequences-input-STAGENAME" onfocusout="set_sequence_input('STAGENAME')">
+   *   </div>
+   * </div>
+   */
+  stages_ui_container = document.getElementById('sequences_per_stage_container');
+  // First clear any existing child elements
+  removeAllChildNodes(stages_ui_container);
+  
+  console.log('stages length: ' + stages.length);
+  
+  for (let i = 0; i < stages.length; i++) {
+    stage_name = stages[i]['name'];
+	
+	// Build elements in reserve order
+	// <p>
+	const p_element = document.createElement("p");
+	p_element.setAttribute("class", "heading");
+	const node = document.createTextNode(stage_name);
+	p_element.appendChild(node);
+	
+	// <input>
+	const input_item = document.createElement("input");
+	input_item.setAttribute("class", "input");
+	input_item.setAttribute("type", "text");
+	input_item.setAttribute("value", "delivery");
+	input_item.setAttribute("id", "sequences-input-"+stage_name);
+	input_item.setAttribute("onfocusout", "set_sequence_input('"+stage_name+"')");
+	
+	// Inner <div>
+	const inner_div = document.createElement("div");
+	
+	// Level Item <div>
+    const level_item_div = document.createElement("div");
+	level_item_div.setAttribute("class", "level-item has-text-centered");
+	
+	// Add <p> and <input> to inner div
+	inner_div.appendChild(p_element);
+	inner_div.appendChild(input_item);
+	
+	// Add inner div to level item div
+	level_item_div.appendChild(inner_div)
+	
+	// Add level_item div to the stages_ui_container
+	stages_ui_container.appendChild(level_item_div)
+  } // End for loop
+}
+
+function generate_shipyard() {
+
+  const metadataObj = { 'name': shipyard_name }
+  const stagesObj = { 'stages': stages }
+  
+  const shipyardObj = {
+    'apiVersion': SHIPYARD_API_VERSION,
+    'kind': 'Shipyard',
+    'metadata': metadataObj,
+    'spec': stagesObj
+  }
+  
+  // Print to screen
+  document.getElementById('result').value = jsyaml.dump(shipyardObj);
+}
+
+// https://www.javascripttutorial.net/dom/manipulating/remove-all-child-nodes/
+function removeAllChildNodes(parent) {
+    while (parent.firstChild) {
+        parent.removeChild(parent.firstChild);
+    }
+}
+</script>
+
+</body>
+</html>

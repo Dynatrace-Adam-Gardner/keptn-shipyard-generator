@@ -42,6 +42,61 @@
       </div>
 	  </section>
 	  
+	  <section class="section">
+	    <div class="container">
+          <h1 class="title">Step 4: Define Tasks per Sequences</h1>
+	    	<p>Define tasks per sequence. Seperated by commas...<br /><br /></p>
+		
+		<!-- This nav list is dynamically built to show sequences -->
+		<nav class="level" id="tasks_per_sequence_container">
+        </nav>
+      </div>
+	  </section>
+	  
+	  <section class="section">
+	    <div class="container">
+          <h1 class="title">Step 5: (Optional) Define Task Metadata</h1>
+	    	<p>Define metadata per tasks. Values must be valid YAML<br /><br /></p>
+		
+		  <!-- This is dynamically built to show stage.sequence.task view -->
+		  <div class="field has-addons">
+            <div class="control is-expanded">
+              <div class="select is-fullwidth">
+                <select id="task_selection">
+                  <option value="dev.delivery.deploy">dev.delivery.deploy</option>
+				  <option value="dev.delivery.test">dev.delivery.test</option>
+			  	  <option value="dev.delivery.evaluate">dev.delivery.evaluate</option>
+				  <option value="dev.delivery.release">dev.delivery.release</option>
+                </select>
+              </div>
+            </div>
+            <div class="control">
+              <button type="submit" class="button is-primary" id="task_picker">Choose</button>
+            </div>
+          </div>
+        </div>
+		
+		<div class="modal"  id="task_metadata_model">
+  <div class="modal-background"></div>
+  <div class="modal-card">
+    <header class="modal-card-head">
+      <p class="modal-card-title" id="task_metadata_model_title"></p>
+      <button class="delete" aria-label="close" id="task_metadata_model_close"></button>
+    </header>
+    <section class="modal-card-body">
+      <div class="box" id="task_metadata_model_container">
+	    <p>This must be valid YAML. See <a href="https://github.com/keptn/spec/blob/master/shipyard.md#task" target="_blank">shipyard spec</a> for info.</p>
+		<textarea class="textarea" rows="10" id="task_metadata_model_textarea"></textarea>
+	  </div>
+    </section>
+    <footer class="modal-card-foot">
+      <button class="button is-success" id="task_metadata_model_save">Save changes</button>
+      <button class="button" id="task_metadata_model_cancel">Cancel</button>
+    </footer>
+  </div>
+</div>
+	  </section>
+	  
     </div>
     <div class="column">
       <section class="section">
@@ -57,7 +112,6 @@
     <h2>TODO List</h2>
 	<ul>
 	  <li>Sequence metadata (eg. <code>triggeredOn</code>)</li>
-	  <li>Tasks</li>
 	</ul>
   </div>
   
@@ -117,6 +171,54 @@ function set_sequence_input(stage) {
 	}
   }
   
+  // Build Tasks UI
+  build_tasks_ui()
+  
+  // Regenerate shipyard
+  generate_shipyard()
+}
+
+function set_tasks_input(stage_sequence) {
+  console.log("adding sequences for stage: " + stage_sequence);
+  tasks_to_add = document.getElementById('tasks-input-'+stage_name+"."+sequence_name).value;
+  console.log("tasks_to_add: " + tasks_to_add);
+  
+  // Parse stage name and sequence name from input
+  stage_sequence_name_array = stage_sequence.split(".");
+  stage_name = stage_sequence_name_array[0];
+  sequence_name = stage_sequence_name_array[1];
+  console.log("Parsed Stage Name: " + stage_name);
+  console.log("Parsed Sequence Name: " + sequence_name);
+  
+  // Loop through each stage and get the matching stage
+  for (let i = 0; i < stages.length; i++) {
+    // If stage name matches the current stage, add sequences!
+	if (stage_name == stages[i].name) {
+	  console.log("Matched stages for: " + stage_name + ". Trying to also match sequences.");
+	  // Now get sequences for this stage and try to match
+	  sequences = stages[i]['sequences'];
+	  console.log(sequences.length);
+	  
+	  for (let i = 0; i < sequences.length; i++) {
+	    console.log("blah sequence name: " + sequences[i].name);
+		
+	    if (sequence_name == sequences[i].name) {
+		  console.log("Found a matching stage and sequence for: " + stage_name+"."+sequence_name + ". Adding tasks " + tasks_to_add + " to sequence now.");
+		  tasks = tasks_to_add.split(",").map(function(item) {
+            task = {
+	          'name': item.trim()
+	        }
+            return task;
+          });
+	      sequences[i]['tasks'] = tasks;
+		}
+	  }
+	}
+  }
+  
+  // Build Tasks UI
+  //build_tasks_ui()
+  
   // Regenerate shipyard
   generate_shipyard()
 }
@@ -174,6 +276,66 @@ function build_stages_ui() {
   } // End for loop
 }
 
+function build_tasks_ui() {
+
+  /* For each combination of stage.sequence, add DOM elements like this:
+   * <div class="level-item has-text-centered">
+   *   <div>
+   *     <p class="heading">dev.delivery</p>
+   *     <input class="input" type="text" value="deployment" id="task-input-dev.delivery" onfocusout="set_task_input('STAGENAME.SEQUENCENAME')">
+   *   </div>
+   * </div>
+   */
+  tasks_ui_container = document.getElementById('tasks_per_sequence_container');
+  // First clear any existing child elements
+  removeAllChildNodes(tasks_ui_container);
+  
+  console.log('stages length: ' + stages.length);
+  
+  for (let i = 0; i < stages.length; i++) {
+    stage_name = stages[i]['name'];
+	
+	sequences = stages[i]['sequences'];
+	
+	for (let i = 0; i < sequences.length; i++) {
+	
+	  sequence_name = sequences[i]['name'];
+	  
+	  // Build elements in reserve order
+	  // <p>
+	  const p_element = document.createElement("p");
+	  p_element.setAttribute("class", "heading");
+	  const node = document.createTextNode(stage_name + "." + sequence_name);
+	  p_element.appendChild(node);
+	
+	  // <input>
+	  const input_item = document.createElement("input");
+	  input_item.setAttribute("class", "input");
+	  input_item.setAttribute("type", "text");
+	  input_item.setAttribute("value", "d,t,e,r");
+	  input_item.setAttribute("id", "tasks-input-"+stage_name+"."+sequence_name);
+	  input_item.setAttribute("onfocusout", "set_tasks_input('"+stage_name+"."+sequence_name+"')");
+	
+	  // Inner <div>
+	  const inner_div = document.createElement("div");
+	
+	  // Level Item <div>
+      const level_item_div = document.createElement("div");
+	  level_item_div.setAttribute("class", "level-item has-text-centered");
+	
+      // Add <p> and <input> to inner div
+	  inner_div.appendChild(p_element);
+	  inner_div.appendChild(input_item);
+	
+	  // Add inner div to level item div
+	  level_item_div.appendChild(inner_div)
+	
+	  // Add level_item div to the stages_ui_container
+	  tasks_ui_container.appendChild(level_item_div)
+	} // End for loop through sequences
+  } // End for loop
+}
+
 function generate_shipyard() {
 
   const metadataObj = { 'name': shipyard_name }
@@ -196,6 +358,39 @@ function removeAllChildNodes(parent) {
         parent.removeChild(parent.firstChild);
     }
 }
+
+// Add event listener to task_picker button
+document.getElementById("task_picker").addEventListener("click", function() {
+
+  var task_selection = document.getElementById("task_selection");
+  var selected_task = task_selection.options[task_selection.selectedIndex].value;
+  console.log("clicked choose on task_picker. selected task is: " + selected_task);
+  
+  // Add header text to model with chosen option
+  document.getElementById("task_metadata_model_title").innerHTML = selected_task + " properties";
+  
+  //const div_element = document.createElement("div");
+  //div_element.setAttribute("class", "heading");
+  //const node = document.createTextNode(selected_task);
+  //div_element.appendChild(node);
+  //document.getElementById("task_metadata_model_container").appendChild(div_element);
+  // Add input box to model with chosen option
+  //const textarea = document.createElement("textarea");
+  //textarea.setAttribute("class", "textarea");
+  //textarea.setAttribute("rows", "10");
+  //document.getElementById("task_metadata_model_container").appendChild(textarea);
+  
+  // Open model
+  document.getElementById("task_metadata_model").setAttribute("class", "modal is-active"); 
+});
+
+// Add event listener to task_metadata_model_close button
+document.getElementById("task_metadata_model_close").addEventListener("click", function() {
+  // Remove all content from model and close box
+  removeAllChildNodes("task_metadata_model_container");
+  // Close model
+  document.getElementById("task_metadata_model").setAttribute("class", "modal"); 
+});
 </script>
 
 </body>

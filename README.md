@@ -1,8 +1,7 @@
 # keptn-shipyard-generator
 
 > This is a work in progress. By no means perfect and full of bugs :)
-
-![image](https://user-images.githubusercontent.com/13639658/125761896-0d1179f3-76bb-4e2c-937c-3eac2e6b24f7.png)
+![image](https://user-images.githubusercontent.com/13639658/125875194-2b313ceb-2794-4109-bd19-32724a90580b.png)
 
 
 ## Usage
